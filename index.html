@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#FFFFFF" />
+  <title>KIRJAINTAUSTA – FD-KUVIO</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ui-bg: #F4F3F0;
+      --ui-surface: #FFFFFF;
+      --ui-text: #111111;
+      --ui-dim: #555555;
+      --ui-border: #D8D4CD;
+      --ui-accent: #9a5ea3;
+      --bar-red: #e20000;
+      --bar-green: #009d00;
+      --shadow: 0 2px 8px rgba(0,0,0,0.06), 0 10px 28px rgba(0,0,0,0.06);
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: #FFFFFF;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      color: var(--ui-text);
+      overscroll-behavior: none;
+    }
+
+    /* ---------- KUVA: KIRJAINTAUSTA + KUVIO ---------- */
+
+    #stage {
+      position: fixed;
+      inset: 0;
+      background: #FFFFFF;
+      overflow: hidden;
+      cursor: pointer;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #letters {
+      position: absolute;
+      top: 0;
+      left: 0;
+      white-space: pre;
+      font-family: Arial, Helvetica, sans-serif;
+      font-weight: 500;
+      color: #000000;
+      pointer-events: none;
+    }
+
+    #figure {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      line-height: 0;
+    }
+
+    /* ---------- YLÄPALKKI ---------- */
+
+    .top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      gap: 10px;
+      padding: 10px 12px;
+      padding-top: max(10px, env(safe-area-inset-top));
+      background: rgba(244,243,240,0.94);
+      border-bottom: 1.5px solid var(--ui-border);
+      z-index: 20;
+      flex-wrap: wrap;
+      transition: transform 0.25s ease, opacity 0.25s ease;
+    }
+
+    .top-bar.hidden {
+      transform: translateY(-110%);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .bar-btn {
+      flex: 1 1 auto;
+      min-height: 52px;
+      min-width: 120px;
+      padding: 12px 16px;
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--ui-text);
+      background: var(--ui-surface);
+      border: 1.5px solid var(--ui-border);
+      border-radius: 12px;
+      cursor: pointer;
+    }
+
+    .bar-btn:active { background: #ECEAE5; }
+
+    .bar-btn.primary {
+      background: var(--ui-accent);
+      border-color: var(--ui-accent);
+      color: #FFFFFF;
+    }
+
+    #hint {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%);
+      background: rgba(17,17,17,0.82);
+      color: #FFFFFF;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      padding: 10px 16px;
+      border-radius: 10px;
+      z-index: 20;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+
+    #hint.hidden { opacity: 0; }
+
+    /* ---------- KALIBROINTI ---------- */
+
+    #calScreen {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      background: var(--ui-bg);
+      overflow-y: auto;
+      padding: 20px 16px 60px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #calScreen.hidden { display: none; }
+
+    .card {
+      background: var(--ui-surface);
+      border: 1.5px solid var(--ui-border);
+      border-radius: 20px;
+      padding: 22px 20px 26px;
+      max-width: 720px;
+      margin: 0 auto;
+      box-shadow: var(--shadow);
+    }
+
+    .card h1 {
+      font-size: 24px;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ui-dim);
+      letter-spacing: 0.4px;
+      margin-bottom: 22px;
+      line-height: 1.45;
+    }
+
+    .field { margin-bottom: 18px; }
+
+    .field > label {
+      display: block;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      margin-bottom: 7px;
+    }
+
+    .field input[type="number"] {
+      width: 100%;
+      min-height: 52px;
+      padding: 12px 14px;
+      font-family: inherit;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--ui-text);
+      background: var(--ui-bg);
+      border: 1.5px solid var(--ui-border);
+      border-radius: 12px;
+    }
+
+    .field input[type="range"] {
+      width: 100%;
+      margin-top: 12px;
+      height: 36px;
+      accent-color: var(--ui-accent);
+    }
+
+    .hint-text {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ui-dim);
+      letter-spacing: 0.4px;
+      margin-top: 6px;
+    }
+
+    .color-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      margin: 22px 0 8px;
+    }
+
+    .swatch {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      border: 1.5px solid var(--ui-border);
+    }
+
+    .color-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .color-row .field { margin-bottom: 0; }
+
+    .ruler-wrap {
+      margin-top: 10px;
+      padding: 12px;
+      background: var(--ui-bg);
+      border: 1.5px solid var(--ui-border);
+      border-radius: 12px;
+      overflow-x: auto;
+    }
+
+    .ruler {
+      height: 10px;
+      background: #000000;
+      border-radius: 2px;
+    }
+
+    .step-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .step-btn {
+      min-height: 50px;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: var(--ui-text);
+      background: var(--ui-bg);
+      border: 1.5px solid var(--ui-border);
+      border-radius: 12px;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    .step-btn:active { background: #E3E0DA; }
+
+    .btn-primary {
+      width: 100%;
+      min-height: 58px;
+      margin-top: 26px;
+      font-family: inherit;
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: #FFFFFF;
+      background: var(--ui-accent);
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+    }
+
+    .btn-secondary {
+      width: 100%;
+      min-height: 52px;
+      margin-top: 10px;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--ui-text);
+      background: var(--ui-surface);
+      border: 1.5px solid var(--ui-border);
+      border-radius: 14px;
+      cursor: pointer;
+    }
+
+    .cal-error {
+      margin-top: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #C93333;
+      letter-spacing: 0.4px;
+      min-height: 20px;
+    }
+
+    .preview-box {
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      margin-top: 8px;
+      background: #FFFFFF;
+      border: 1.5px solid var(--ui-border);
+      border-radius: 12px;
+    }
+
+    @media (max-width: 420px) {
+      .bar-btn { font-size: 14px; min-width: 96px; padding: 12px 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- KUVA -->
+  <div id="stage">
+    <div id="letters"></div>
+    <div id="figure"></div>
+  </div>
+
+  <!-- YLÄPALKKI -->
+  <div class="top-bar" id="topBar">
+    <button class="bar-btn primary" id="orientBtn">PALKIT: VAAKA</button>
+    <button class="bar-btn" id="calBtn">KALIBROI</button>
+  </div>
+
+  <div id="hint">NAPAUTA KUVAA – VALIKKO PIILOON</div>
+
+  <!-- KALIBROINTI -->
+  <div id="calScreen" class="hidden">
+    <div class="card">
+      <h1>KALIBROINTI</h1>
+      <p class="subtitle">ASETUKSET SÄILYVÄT TÄMÄN SELAIMEN MUISTISSA.</p>
+
+      <div class="field">
+        <label for="pxPerMmInput">PX / MM</label>
+        <input id="pxPerMmInput" type="number" step="any" min="0.1" placeholder="ESIM. 3.7795" />
+        <div class="hint-text">NÄYTÖN MITTAKALIBROINNIN ANTAMA ARVO. VOIT SYÖTTÄÄ ARVON SUORAAN TAI SÄÄTÄÄ VIIVAN PITUUTTA NAPEILLA.</div>
+        <div class="ruler-wrap">
+          <div class="ruler" id="calRuler"></div>
+        </div>
+        <div class="hint-text">TARKISTUSVIIVA = 100 MM. MITTAA VIIVA VIIVAIMELLA JA SÄÄDÄ PITUUTTA, KUNNES SE ON TASAN 100 MM.</div>
+        <div class="step-row">
+          <button type="button" class="step-btn" data-step="-10">−10 PX</button>
+          <button type="button" class="step-btn" data-step="-1">−1 PX</button>
+          <button type="button" class="step-btn" data-step="1">+1 PX</button>
+          <button type="button" class="step-btn" data-step="10">+10 PX</button>
+        </div>
+        <div class="hint-text" id="rulerPxHint"></div>
+      </div>
+
+      <div class="field">
+        <label for="letterMmInput">KIRJAINKOKO (MM)</label>
+        <input id="letterMmInput" type="number" step="any" min="0.5" max="60" />
+        <input id="letterMmRange" type="range" min="1" max="30" step="0.5" />
+        <div class="hint-text" id="letterPxHint"></div>
+      </div>
+
+      <div class="field">
+        <label for="figureMmInput">KUVION HALKAISIJA (MM)</label>
+        <input id="figureMmInput" type="number" step="any" min="5" max="1000" />
+        <input id="figureMmRange" type="range" min="10" max="400" step="1" />
+        <div class="hint-text" id="figurePxHint"></div>
+      </div>
+
+      <div class="color-label">PUNAINEN <span class="swatch" id="redPreview"></span></div>
+      <div class="color-row">
+        <div class="field"><label for="calRedR">R</label><input id="calRedR" type="number" min="0" max="255" step="1" /></div>
+        <div class="field"><label for="calRedG">G</label><input id="calRedG" type="number" min="0" max="255" step="1" /></div>
+        <div class="field"><label for="calRedB">B</label><input id="calRedB" type="number" min="0" max="255" step="1" /></div>
+      </div>
+
+      <div class="color-label">VIHREÄ <span class="swatch" id="greenPreview"></span></div>
+      <div class="color-row">
+        <div class="field"><label for="calGreenR">R</label><input id="calGreenR" type="number" min="0" max="255" step="1" /></div>
+        <div class="field"><label for="calGreenG">G</label><input id="calGreenG" type="number" min="0" max="255" step="1" /></div>
+        <div class="field"><label for="calGreenB">B</label><input id="calGreenB" type="number" min="0" max="255" step="1" /></div>
+      </div>
+
+      <div class="color-label">ESIKATSELU</div>
+      <div class="preview-box" id="calPreview"></div>
+
+      <button class="btn-primary" id="saveCalBtn">TALLENNA JA PALAA</button>
+      <button class="btn-secondary" id="cancelCalBtn">PERUUTA</button>
+      <button class="btn-secondary" id="resetCalBtn">PALAUTA OLETUSARVOT</button>
+      <div class="cal-error" id="calError"></div>
+    </div>
+  </div>
+
+<script>
+  'use strict';
+
+  const $ = id => document.getElementById(id);
+
+  const STORAGE_KEY = 'kirjaintausta_cal_v1';
+  const LEGACY_KEY  = 'naontutkimus_cal_v1';   /* LähiFD-ohjelman kalibrointi, jos sama origin */
+
+  const DEFAULTS = {
+    pxPerMm: 3.7795,     /* 96 dpi */
+    letterMm: 6,         /* kirjainten fonttikoko millimetreinä */
+    figureMm: 108,       /* kuvion halkaisija millimetreinä */
+    red:   { r: 226, g: 0,   b: 0 },
+    green: { r: 0,   g: 157, b: 0 },
+    orientation: 'horiz' /* 'horiz' = väripalkit vaakatasossa, 'vert' = pystyssä */
+  };
+
+  let cal = JSON.parse(JSON.stringify(DEFAULTS));
+
+  /* ---------- APUFUNKTIOT ---------- */
+
+  const clampByte = v => Math.max(0, Math.min(255, Math.round(Number(v) || 0)));
+  const rgbHex = c =>
+    '#' + [c.r, c.g, c.b].map(v => clampByte(v).toString(16).padStart(2, '0')).join('');
+
+  function isValidRgb(c) {
+    return c && ['r', 'g', 'b'].every(k => Number.isFinite(Number(c[k])));
+  }
+
+  /* ---------- TALLENNUS ---------- */
+
+  function loadCal() {
+    let d = null;
+    try { d = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (e) { d = null; }
+
+    if (!d) {
+      /* Ensimmäisellä käynnistyksellä otetaan käyttöön LähiFD:n kalibrointi, jos se löytyy. */
+      try {
+        const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY));
+        if (legacy) d = { pxPerMm: legacy.pxPerMm, red: legacy.red, green: legacy.green };
+      } catch (e) { /* ohitetaan */ }
+    }
+    if (!d) return;
+
+    if (Number(d.pxPerMm)  > 0) cal.pxPerMm  = Number(d.pxPerMm);
+    if (Number(d.letterMm) > 0) cal.letterMm = Number(d.letterMm);
+    if (Number(d.figureMm) > 0) cal.figureMm = Number(d.figureMm);
+    if (isValidRgb(d.red))   cal.red   = { r: clampByte(d.red.r),   g: clampByte(d.red.g),   b: clampByte(d.red.b) };
+    if (isValidRgb(d.green)) cal.green = { r: clampByte(d.green.r), g: clampByte(d.green.g), b: clampByte(d.green.b) };
+    if (d.orientation === 'horiz' || d.orientation === 'vert') cal.orientation = d.orientation;
+  }
+
+  function saveCal() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(cal)); } catch (e) { /* ohitetaan */ }
+  }
+
+  /* ---------- KUVIO (sama geometria kuin LähiFD-ohjelmassa) ---------- */
+
+  function malletSVG(rotation, sizePx) {
+    const green = rgbHex(cal.green);
+    const red   = rgbHex(cal.red);
+    return `
+      <svg xmlns="http://www.w3.org/2000/svg" width="${sizePx}" height="${sizePx}" viewBox="0 0 512 512">
+        <g transform="rotate(${rotation}, 256, 256)">
+          <circle cx="256" cy="256" r="240" fill="#000000"/>
+          <rect x="210" y="33" width="92" height="446" fill="#ffffff"/>
+          <rect x="250.5" y="224" width="11" height="64" fill="#000000"/>
+          <rect x="224" y="250.5" width="64" height="11" fill="#000000"/>
+          <rect x="228" y="100.5" width="56" height="56" fill="#000000"/>
+          <rect x="239" y="111.5" width="34" height="34" fill="#ffffff"/>
+          <rect x="228" y="355.5" width="56" height="56" fill="#000000"/>
+          <rect x="239" y="366.5" width="34" height="34" fill="#ffffff"/>
+          <rect x="42"  y="237" width="152" height="38" fill="${green}"/>
+          <rect x="318" y="237" width="152" height="38" fill="${red}"/>
+        </g>
+      </svg>`;
+  }
+
+  /* Musta ympyrä on halkaisijaltaan 480 yksikköä 512 yksikön ruudukossa,
+     joten SVG:n leveys skaalataan suhteella 512/480, jotta ympyrän
+     todellinen halkaisija on haluttu millimetrimäärä. */
+  function figureSizePx() {
+    return cal.figureMm * cal.pxPerMm * (512 / 480);
+  }
+
+  function renderFigure() {
+    const rotation = cal.orientation === 'vert' ? -90 : 0;
+    $('figure').innerHTML = malletSVG(rotation, figureSizePx());
+  }
+
+  /* ---------- KIRJAINTAUSTA ---------- */
+
+  const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const measureCtx = document.createElement('canvas').getContext('2d');
+
+  function renderLetters() {
+    const el = $('letters');
+    const fontPx = Math.max(4, cal.letterMm * cal.pxPerMm);
+    const lineHeightPx = fontPx * 1.30;
+    const letterSpacingPx = fontPx * 0.30;
+
+    el.style.fontSize = fontPx + 'px';
+    el.style.lineHeight = lineHeightPx + 'px';
+    el.style.letterSpacing = letterSpacingPx + 'px';
+
+    /* Kirjainten leveydet mitataan samalla fontilla kuin CSS piirtää. */
+    measureCtx.font = '500 ' + fontPx + 'px Arial, Helvetica, sans-serif';
+    const adv = {};
+    for (const ch of ALPHABET) adv[ch] = measureCtx.measureText(ch).width + letterSpacingPx;
+
+    const w = window.innerWidth;
+    const rows = Math.ceil(window.innerHeight / lineHeightPx) + 1;
+
+    const lines = new Array(rows);
+    for (let r = 0; r < rows; r++) {
+      let line = '';
+      let used = 0;
+      while (used < w) {
+        const ch = ALPHABET[(Math.random() * 26) | 0];
+        line += ch;
+        used += adv[ch];
+      }
+      lines[r] = line;
+    }
+    el.textContent = lines.join('\n');
+  }
+
+  function renderAll() {
+    renderLetters();
+    renderFigure();
+  }
+
+  /* ---------- YLÄPALKKI JA NAPIT ---------- */
+
+  function updateOrientBtn() {
+    $('orientBtn').textContent = cal.orientation === 'vert' ? 'PALKIT: PYSTY' : 'PALKIT: VAAKA';
+  }
+
+  $('orientBtn').addEventListener('click', e => {
+    e.stopPropagation();
+    cal.orientation = cal.orientation === 'vert' ? 'horiz' : 'vert';
+    updateOrientBtn();
+    renderFigure();
+    saveCal();
+  });
+
+  $('calBtn').addEventListener('click', e => {
+    e.stopPropagation();
+    openCal();
+  });
+
+  /* Kuvan napautus piilottaa/näyttää valikon. */
+  $('stage').addEventListener('click', () => {
+    $('topBar').classList.toggle('hidden');
+    $('hint').classList.add('hidden');
+  });
+
+  document.addEventListener('keydown', e => {
+    if (!$('calScreen').classList.contains('hidden')) {
+      if (e.key === 'Escape') closeCal();
+      return;
+    }
+    const k = e.key.toLowerCase();
+    if (k === 'v')      { cal.orientation = 'horiz'; updateOrientBtn(); renderFigure(); saveCal(); }
+    else if (k === 'p') { cal.orientation = 'vert';  updateOrientBtn(); renderFigure(); saveCal(); }
+    else if (k === 'k') { openCal(); }
+    else if (k === 'h') { $('topBar').classList.toggle('hidden'); }
+  });
+
+  /* ---------- KALIBROINTINÄKYMÄ ---------- */
+
+  const calFieldIds = [
+    'pxPerMmInput', 'letterMmInput', 'letterMmRange', 'figureMmInput', 'figureMmRange',
+    'calRedR', 'calRedG', 'calRedB', 'calGreenR', 'calGreenG', 'calGreenB'
+  ];
+
+  function fillCalForm(src) {
+    $('pxPerMmInput').value  = src.pxPerMm;
+    $('letterMmInput').value = src.letterMm;
+    $('letterMmRange').value = src.letterMm;
+    $('figureMmInput').value = src.figureMm;
+    $('figureMmRange').value = src.figureMm;
+    $('calRedR').value   = src.red.r;
+    $('calRedG').value   = src.red.g;
+    $('calRedB').value   = src.red.b;
+    $('calGreenR').value = src.green.r;
+    $('calGreenG').value = src.green.g;
+    $('calGreenB').value = src.green.b;
+    updateCalPreview();
+  }
+
+  function formValues() {
+    const px = parseFloat($('pxPerMmInput').value);
+    return {
+      pxPerMm:  px > 0 ? px : 0,
+      letterMm: parseFloat($('letterMmInput').value),
+      figureMm: parseFloat($('figureMmInput').value),
+      red:   { r: clampByte($('calRedR').value),   g: clampByte($('calRedG').value),   b: clampByte($('calRedB').value) },
+      green: { r: clampByte($('calGreenR').value), g: clampByte($('calGreenG').value), b: clampByte($('calGreenB').value) }
+    };
+  }
+
+  function updateCalPreview() {
+    const v = formValues();
+    const px = v.pxPerMm > 0 ? v.pxPerMm : DEFAULTS.pxPerMm;
+
+    $('calRuler').style.width = (100 * px) + 'px';
+    $('rulerPxHint').textContent = 'VIIVAN PITUUS: ' + Math.round(100 * px) + ' PX  (' + px + ' PX/MM)';
+    $('redPreview').style.background   = rgbHex(v.red);
+    $('greenPreview').style.background = rgbHex(v.green);
+
+    $('letterPxHint').textContent = Number.isFinite(v.letterMm)
+      ? 'FONTTIKOKO NÄYTÖLLÄ: ' + Math.round(v.letterMm * px) + ' PX'
+      : '';
+    $('figurePxHint').textContent = Number.isFinite(v.figureMm)
+      ? 'KUVION HALKAISIJA NÄYTÖLLÄ: ' + Math.round(v.figureMm * px) + ' PX'
+      : '';
+
+    /* Esikatselu: kiinteä 160 px, värit ja asento suoraan lomakkeelta. */
+    const saved = { red: cal.red, green: cal.green };
+    cal.red = v.red;
+    cal.green = v.green;
+    $('calPreview').innerHTML = malletSVG(cal.orientation === 'vert' ? -90 : 0, 160);
+    cal.red = saved.red;
+    cal.green = saved.green;
+  }
+
+  calFieldIds.forEach(id => $(id).addEventListener('input', updateCalPreview));
+
+  /* Tarkistusviivan pidennys / lyhennys pikselin tarkkuudella.
+     Viiva on 100 mm, joten 1 px viivassa = 0,01 px/mm. */
+  function adjustRuler(deltaPx) {
+    const cur = parseFloat($('pxPerMmInput').value);
+    const curPx = Math.round((cur > 0 ? cur : DEFAULTS.pxPerMm) * 100);
+    const newPx = Math.max(20, Math.min(20000, curPx + deltaPx));
+    $('pxPerMmInput').value = Number((newPx / 100).toFixed(4));
+    updateCalPreview();
+  }
+
+  let holdDelay = null, holdRepeat = null;
+
+  function stopHold() {
+    clearTimeout(holdDelay);
+    clearInterval(holdRepeat);
+    holdDelay = holdRepeat = null;
+  }
+
+  function startHold(step) {
+    stopHold();
+    adjustRuler(step);
+    holdDelay = setTimeout(() => {
+      holdRepeat = setInterval(() => adjustRuler(step), 70);
+    }, 450);
+  }
+
+  document.querySelectorAll('.step-btn').forEach(btn => {
+    const step = parseInt(btn.dataset.step, 10);
+    btn.addEventListener('pointerdown', e => { e.preventDefault(); startHold(step); });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => btn.addEventListener(ev, stopHold));
+  });
+
+  window.addEventListener('blur', stopHold);
+
+  $('letterMmRange').addEventListener('input', () => { $('letterMmInput').value = $('letterMmRange').value; updateCalPreview(); });
+  $('letterMmInput').addEventListener('input', () => { $('letterMmRange').value = $('letterMmInput').value; });
+  $('figureMmRange').addEventListener('input', () => { $('figureMmInput').value = $('figureMmRange').value; updateCalPreview(); });
+  $('figureMmInput').addEventListener('input', () => { $('figureMmRange').value = $('figureMmInput').value; });
+
+  function openCal() {
+    fillCalForm(cal);
+    $('calError').textContent = '';
+    $('calScreen').classList.remove('hidden');
+  }
+
+  function closeCal() {
+    $('calScreen').classList.add('hidden');
+  }
+
+  $('saveCalBtn').addEventListener('click', () => {
+    const v = formValues();
+
+    if (!(v.pxPerMm > 0)) { $('calError').textContent = 'SYÖTÄ KELVOLLINEN PX / MM -ARVO.'; return; }
+    if (!(v.letterMm > 0)) { $('calError').textContent = 'SYÖTÄ KELVOLLINEN KIRJAINKOKO.'; return; }
+    if (!(v.figureMm > 0)) { $('calError').textContent = 'SYÖTÄ KELVOLLINEN KUVION HALKAISIJA.'; return; }
+
+    cal.pxPerMm  = v.pxPerMm;
+    cal.letterMm = v.letterMm;
+    cal.figureMm = v.figureMm;
+    cal.red      = v.red;
+    cal.green    = v.green;
+
+    saveCal();
+    closeCal();
+    renderAll();
+  });
+
+  $('cancelCalBtn').addEventListener('click', closeCal);
+
+  $('resetCalBtn').addEventListener('click', () => {
+    fillCalForm(DEFAULTS);
+    $('calError').textContent = '';
+  });
+
+  /* ---------- KOON MUUTOS ---------- */
+
+  let resizeTimer = null;
+  let lastW = window.innerWidth, lastH = window.innerHeight;
+
+  window.addEventListener('resize', () => {
+    /* Androidissa osoitepalkin liuku muuttaa korkeutta – piirretään vain
+       riittävän suurella muutoksella, jotta kirjaimet eivät vaihdu turhaan. */
+    if (Math.abs(window.innerWidth - lastW) < 2 && Math.abs(window.innerHeight - lastH) < 80) return;
+    lastW = window.innerWidth;
+    lastH = window.innerHeight;
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(renderLetters, 150);
+  });
+
+  /* ---------- KÄYNNISTYS ---------- */
+
+  loadCal();
+  updateOrientBtn();
+  renderAll();
+  setTimeout(() => $('hint').classList.add('hidden'), 5000);
+</script>
+</body>
+</html>
