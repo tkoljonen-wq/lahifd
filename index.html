@@ -195,13 +195,6 @@
       border-radius: 12px;
     }
 
-    .field input[type="range"] {
-      width: 100%;
-      margin-top: 12px;
-      height: 36px;
-      accent-color: var(--ui-accent);
-    }
-
     .hint-text {
       font-size: 12px;
       font-weight: 600;
@@ -352,13 +345,11 @@
       <p class="subtitle">ASETUKSET SÄILYVÄT TÄMÄN SELAIMEN MUISTISSA.</p>
 
       <div class="field">
-        <label for="pxPerMmInput">PX / MM</label>
-        <input id="pxPerMmInput" type="number" step="any" min="0.1" placeholder="ESIM. 3.7795" />
-        <div class="hint-text">NÄYTÖN MITTAKALIBROINNIN ANTAMA ARVO. VOIT SYÖTTÄÄ ARVON SUORAAN TAI SÄÄTÄÄ VIIVAN PITUUTTA NAPEILLA.</div>
+        <label>TARKISTUSVIIVA – 100 MM</label>
         <div class="ruler-wrap">
           <div class="ruler" id="calRuler"></div>
         </div>
-        <div class="hint-text">TARKISTUSVIIVA = 100 MM. MITTAA VIIVA VIIVAIMELLA JA SÄÄDÄ PITUUTTA, KUNNES SE ON TASAN 100 MM.</div>
+        <div class="hint-text">MITTAA VIIVA VIIVAIMELLA JA SÄÄDÄ PITUUTTA NAPEILLA, KUNNES SE ON TASAN 100 MM.</div>
         <div class="step-row">
           <button type="button" class="step-btn" data-step="-10">−10 PX</button>
           <button type="button" class="step-btn" data-step="-1">−1 PX</button>
@@ -369,17 +360,8 @@
       </div>
 
       <div class="field">
-        <label for="letterMmInput">KIRJAINKOKO (MM)</label>
-        <input id="letterMmInput" type="number" step="any" min="0.5" max="60" />
-        <input id="letterMmRange" type="range" min="1" max="30" step="0.5" />
-        <div class="hint-text" id="letterPxHint"></div>
-      </div>
-
-      <div class="field">
-        <label for="figureMmInput">KUVION HALKAISIJA (MM)</label>
-        <input id="figureMmInput" type="number" step="any" min="5" max="1000" />
-        <input id="figureMmRange" type="range" min="10" max="400" step="1" />
-        <div class="hint-text" id="figurePxHint"></div>
+        <label>KIINTEÄT KOOT</label>
+        <div class="hint-text" id="fixedSizeHint"></div>
       </div>
 
       <div class="color-label">PUNAINEN <span class="swatch" id="redPreview"></span></div>
@@ -414,10 +396,12 @@
   const STORAGE_KEY = 'kirjaintausta_cal_v1';
   const LEGACY_KEY  = 'naontutkimus_cal_v1';   /* LähiFD-ohjelman kalibrointi, jos sama origin */
 
+  /* Kiinteät, kalibroinnista riippumattomat mitat. */
+  const LETTER_MM = 1.5;   /* kirjainten fonttikoko millimetreinä */
+  const FIGURE_MM = 17;    /* kuvion halkaisija millimetreinä */
+
   const DEFAULTS = {
     pxPerMm: 3.7795,     /* 96 dpi */
-    letterMm: 6,         /* kirjainten fonttikoko millimetreinä */
-    figureMm: 108,       /* kuvion halkaisija millimetreinä */
     red:   { r: 226, g: 0,   b: 0 },
     green: { r: 0,   g: 157, b: 0 },
     orientation: 'horiz' /* 'horiz' = väripalkit vaakatasossa, 'vert' = pystyssä */
@@ -450,9 +434,7 @@
     }
     if (!d) return;
 
-    if (Number(d.pxPerMm)  > 0) cal.pxPerMm  = Number(d.pxPerMm);
-    if (Number(d.letterMm) > 0) cal.letterMm = Number(d.letterMm);
-    if (Number(d.figureMm) > 0) cal.figureMm = Number(d.figureMm);
+    if (Number(d.pxPerMm) > 0) cal.pxPerMm = Number(d.pxPerMm);
     if (isValidRgb(d.red))   cal.red   = { r: clampByte(d.red.r),   g: clampByte(d.red.g),   b: clampByte(d.red.b) };
     if (isValidRgb(d.green)) cal.green = { r: clampByte(d.green.r), g: clampByte(d.green.g), b: clampByte(d.green.b) };
     if (d.orientation === 'horiz' || d.orientation === 'vert') cal.orientation = d.orientation;
@@ -488,7 +470,7 @@
      joten SVG:n leveys skaalataan suhteella 512/480, jotta ympyrän
      todellinen halkaisija on haluttu millimetrimäärä. */
   function figureSizePx() {
-    return cal.figureMm * cal.pxPerMm * (512 / 480);
+    return FIGURE_MM * cal.pxPerMm * (512 / 480);
   }
 
   function renderFigure() {
@@ -503,7 +485,7 @@
 
   function renderLetters() {
     const el = $('letters');
-    const fontPx = Math.max(4, cal.letterMm * cal.pxPerMm);
+    const fontPx = LETTER_MM * cal.pxPerMm;
     const lineHeightPx = fontPx * 1.30;
     const letterSpacingPx = fontPx * 0.30;
 
@@ -578,16 +560,14 @@
   /* ---------- KALIBROINTINÄKYMÄ ---------- */
 
   const calFieldIds = [
-    'pxPerMmInput', 'letterMmInput', 'letterMmRange', 'figureMmInput', 'figureMmRange',
     'calRedR', 'calRedG', 'calRedB', 'calGreenR', 'calGreenG', 'calGreenB'
   ];
 
+  /* Kalibroinnin px/mm-arvoa muokataan vain tarkistusviivan napeilla. */
+  let calPxPerMm = DEFAULTS.pxPerMm;
+
   function fillCalForm(src) {
-    $('pxPerMmInput').value  = src.pxPerMm;
-    $('letterMmInput').value = src.letterMm;
-    $('letterMmRange').value = src.letterMm;
-    $('figureMmInput').value = src.figureMm;
-    $('figureMmRange').value = src.figureMm;
+    calPxPerMm = src.pxPerMm > 0 ? src.pxPerMm : DEFAULTS.pxPerMm;
     $('calRedR').value   = src.red.r;
     $('calRedG').value   = src.red.g;
     $('calRedB').value   = src.red.b;
@@ -598,11 +578,8 @@
   }
 
   function formValues() {
-    const px = parseFloat($('pxPerMmInput').value);
     return {
-      pxPerMm:  px > 0 ? px : 0,
-      letterMm: parseFloat($('letterMmInput').value),
-      figureMm: parseFloat($('figureMmInput').value),
+      pxPerMm: calPxPerMm > 0 ? calPxPerMm : 0,
       red:   { r: clampByte($('calRedR').value),   g: clampByte($('calRedG').value),   b: clampByte($('calRedB').value) },
       green: { r: clampByte($('calGreenR').value), g: clampByte($('calGreenG').value), b: clampByte($('calGreenB').value) }
     };
@@ -617,12 +594,9 @@
     $('redPreview').style.background   = rgbHex(v.red);
     $('greenPreview').style.background = rgbHex(v.green);
 
-    $('letterPxHint').textContent = Number.isFinite(v.letterMm)
-      ? 'FONTTIKOKO NÄYTÖLLÄ: ' + Math.round(v.letterMm * px) + ' PX'
-      : '';
-    $('figurePxHint').textContent = Number.isFinite(v.figureMm)
-      ? 'KUVION HALKAISIJA NÄYTÖLLÄ: ' + Math.round(v.figureMm * px) + ' PX'
-      : '';
+    $('fixedSizeHint').textContent =
+      'KIRJAINKOKO 1,5 MM (' + (LETTER_MM * px).toFixed(1) + ' PX)  ·  ' +
+      'KUVION HALKAISIJA 17 MM (' + Math.round(FIGURE_MM * px) + ' PX)';
 
     /* Esikatselu: kiinteä 160 px, värit ja asento suoraan lomakkeelta. */
     const saved = { red: cal.red, green: cal.green };
@@ -638,10 +612,9 @@
   /* Tarkistusviivan pidennys / lyhennys pikselin tarkkuudella.
      Viiva on 100 mm, joten 1 px viivassa = 0,01 px/mm. */
   function adjustRuler(deltaPx) {
-    const cur = parseFloat($('pxPerMmInput').value);
-    const curPx = Math.round((cur > 0 ? cur : DEFAULTS.pxPerMm) * 100);
+    const curPx = Math.round((calPxPerMm > 0 ? calPxPerMm : DEFAULTS.pxPerMm) * 100);
     const newPx = Math.max(20, Math.min(20000, curPx + deltaPx));
-    $('pxPerMmInput').value = Number((newPx / 100).toFixed(4));
+    calPxPerMm = Number((newPx / 100).toFixed(4));
     updateCalPreview();
   }
 
@@ -669,11 +642,6 @@
 
   window.addEventListener('blur', stopHold);
 
-  $('letterMmRange').addEventListener('input', () => { $('letterMmInput').value = $('letterMmRange').value; updateCalPreview(); });
-  $('letterMmInput').addEventListener('input', () => { $('letterMmRange').value = $('letterMmInput').value; });
-  $('figureMmRange').addEventListener('input', () => { $('figureMmInput').value = $('figureMmRange').value; updateCalPreview(); });
-  $('figureMmInput').addEventListener('input', () => { $('figureMmRange').value = $('figureMmInput').value; });
-
   function openCal() {
     fillCalForm(cal);
     $('calError').textContent = '';
@@ -687,15 +655,11 @@
   $('saveCalBtn').addEventListener('click', () => {
     const v = formValues();
 
-    if (!(v.pxPerMm > 0)) { $('calError').textContent = 'SYÖTÄ KELVOLLINEN PX / MM -ARVO.'; return; }
-    if (!(v.letterMm > 0)) { $('calError').textContent = 'SYÖTÄ KELVOLLINEN KIRJAINKOKO.'; return; }
-    if (!(v.figureMm > 0)) { $('calError').textContent = 'SYÖTÄ KELVOLLINEN KUVION HALKAISIJA.'; return; }
+    if (!(v.pxPerMm > 0)) { $('calError').textContent = 'SÄÄDÄ TARKISTUSVIIVAN PITUUS ENSIN.'; return; }
 
-    cal.pxPerMm  = v.pxPerMm;
-    cal.letterMm = v.letterMm;
-    cal.figureMm = v.figureMm;
-    cal.red      = v.red;
-    cal.green    = v.green;
+    cal.pxPerMm = v.pxPerMm;
+    cal.red     = v.red;
+    cal.green   = v.green;
 
     saveCal();
     closeCal();
